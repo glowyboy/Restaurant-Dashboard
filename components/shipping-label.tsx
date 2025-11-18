@@ -1,10 +1,9 @@
 'use client';
 
-import { useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Download } from 'lucide-react';
 import QRCode from 'qrcode';
-import Barcode from 'react-barcode';
+import JsBarcode from 'jsbarcode';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 import { type Order } from '@/lib/supabase';
@@ -14,7 +13,10 @@ interface ShippingLabelProps {
 }
 
 export function ShippingLabel({ order }: ShippingLabelProps) {
-  const labelRef = useRef<HTMLDivElement>(null);
+  // Only black color
+  const generateColorCode = (orderId: number) => {
+    return '#000000';
+  };
 
   const generateQRCode = async () => {
     const orderData = {
@@ -25,13 +27,14 @@ export function ShippingLabel({ order }: ShippingLabelProps) {
       items: order.items || [],
       total: order.total,
       date: order.created_at,
+      colorCode: generateColorCode(order.id),
     };
-    
+
     try {
       const qrDataUrl = await QRCode.toDataURL(JSON.stringify(orderData), {
         width: 200,
         margin: 1,
-        errorCorrectionLevel: 'M',
+        errorCorrectionLevel: 'H',
       });
       return qrDataUrl;
     } catch (error) {
@@ -40,183 +43,156 @@ export function ShippingLabel({ order }: ShippingLabelProps) {
     }
   };
 
-  const downloadLabel = async () => {
-    console.log('Download label clicked for order:', order.id);
-    
+  const generateEAN13Barcode = (orderId: number): string => {
     try {
-      // Generate QR code
+      // Create a canvas element
+      const canvas = document.createElement('canvas');
+
+      // Generate EAN13 barcode (12 digits + 1 check digit)
+      // Format: 200 (prefix) + 9 digits order ID
+      const barcodeValue = `200${String(orderId).padStart(9, '0')}`;
+
+      // Use JsBarcode to generate EAN13
+      JsBarcode(canvas, barcodeValue, {
+        format: 'EAN13',
+        width: 3,
+        height: 80,
+        displayValue: true,
+        fontSize: 16,
+        margin: 10,
+        background: '#ffffff',
+        lineColor: '#000000',
+      });
+
+      return canvas.toDataURL('image/png');
+    } catch (error) {
+      console.error('Error generating barcode:', error);
+      // Fallback barcode
+      return 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
+    }
+  };
+
+  const downloadLabel = async () => {
+    console.log('Download sticker label clicked for order:', order.id);
+
+    try {
+      // Generate QR code and barcode
       const qrCode = await generateQRCode();
-      console.log('QR code generated');
-      
+      const barcode = generateEAN13Barcode(order.id);
+      const colorCode = generateColorCode(order.id);
+      console.log('QR code and EAN13 barcode generated');
+
       // Create an iframe to isolate styles
       const iframe = document.createElement('iframe');
       iframe.style.position = 'absolute';
       iframe.style.left = '-9999px';
-      iframe.style.width = '800px';
-      iframe.style.height = '1200px';
+      iframe.style.width = '600px';
+      iframe.style.height = '900px';
       document.body.appendChild(iframe);
-      
-      const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
+
+      const iframeDoc =
+        iframe.contentDocument || iframe.contentWindow?.document;
       if (!iframeDoc) throw new Error('Cannot access iframe document');
-      
+
       // Add basic styles to iframe
-      iframeDoc.write(`
+      const styleContent = `
         <!DOCTYPE html>
         <html>
         <head>
           <style>
             * { margin: 0; padding: 0; box-sizing: border-box; }
-            body { background: white; padding: 40px; font-family: Arial, sans-serif; }
+            body { background: white; padding: 0; font-family: Arial, sans-serif; }
           </style>
         </head>
         <body></body>
         </html>
-      `);
+      `;
+      iframeDoc.open();
+      iframeDoc.write(styleContent);
       iframeDoc.close();
-      
+
       const tempContainer = iframeDoc.body;
 
-      // Build the label HTML
+      // Build sticker label (4x6 inch format - 600x900px)
       tempContainer.innerHTML = `
-        <div style="font-family: Arial, sans-serif; border: 3px solid #000; padding: 30px; background: #ffffff; color: #000000;">
-          <!-- Header with Logo -->
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; border-bottom: 2px solid #000; padding-bottom: 20px;">
-            <div>
-              <h1 style="margin: 0; font-size: 32px; font-weight: bold; color: #d32f2f;">LAMSALNA</h1>
-              <p style="margin: 5px 0 0 0; font-size: 14px; color: #666;">Repas Marocains Authentiques</p>
-            </div>
-            <div style="text-align: right;">
-              <div style="font-size: 18px; font-weight: bold; color: #000;">COMMANDE #${order.id}</div>
-              <div style="font-size: 14px; margin-top: 5px; color: #666;">${new Date(order.created_at).toLocaleDateString('fr-FR')}</div>
+        <div style="width: 600px; height: 900px; font-family: Arial, sans-serif; padding: 20px; background: #ffffff; color: #000000; display: flex; flex-direction: column;">
+          
+          <!-- Logo at Top -->
+          <div style="text-align: center; margin-bottom: 15px;">
+            <img src="/logo2.png" alt="Logo" style="width: 250px; height: auto; display: block; margin: 0 auto;" onerror="this.style.display='none'"/>
+          </div>
+
+          <!-- Restaurant Info -->
+          <div style="text-align: center; border-bottom: 3px solid #000; padding-bottom: 12px; margin-bottom: 15px;">
+            <div style="font-size: 14px; color: #000; font-weight: 600; margin-bottom: 6px;">Repas Marocains Authentiques</div>
+            <div style="font-size: 12px; color: #000; line-height: 1.4;">
+              <div>123 Rue de la Cuisine, Casablanca</div>
+              <div style="font-weight: bold; margin-top: 3px;">Tel: +212 5XX-XXXXXX</div>
             </div>
           </div>
 
-          <!-- Customer Info -->
-          <div style="margin-bottom: 30px; background: #f5f5f5; padding: 20px; border-radius: 8px; border: 1px solid #ddd;">
-            <div style="font-size: 14px; font-weight: bold; margin-bottom: 15px; text-transform: uppercase; color: #666;">LIVRER À:</div>
-            <div style="font-size: 24px; font-weight: bold; margin-bottom: 10px; color: #000;">${order.customer_name || 'N/A'}</div>
-            <div style="font-size: 18px; margin-bottom: 8px; color: #000;">📍 ${order.delivery_address || 'N/A'}</div>
-            <div style="font-size: 18px; color: #000;">📞 ${order.customer_phone || 'N/A'}</div>
+          <!-- Order Code (No border) -->
+          <div style="text-align: center; margin-bottom: 15px;">
+            <span style="font-size: 20px; font-weight: bold; color: #000;">COMMANDE #${order.id}</span>
           </div>
 
-          <!-- Order Items -->
-          <div style="margin-bottom: 30px;">
-            <div style="font-size: 14px; font-weight: bold; margin-bottom: 15px; text-transform: uppercase; color: #666;">CONTENU:</div>
-            ${(order.items || []).map(item => `
-              <div style="display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #ddd;">
-                <div style="font-size: 16px; color: #000;">${item.quantity || 1}x ${item.dish_name || 'Plat'}</div>
-                <div style="font-size: 16px; font-weight: bold; color: #000;">$${((item.price || 0) * (item.quantity || 1)).toFixed(2)}</div>
-              </div>
-            `).join('')}
-            <div style="display: flex; justify-content: space-between; padding: 15px 0; margin-top: 10px; border-top: 2px solid #000;">
-              <div style="font-size: 20px; font-weight: bold; color: #000;">TOTAL:</div>
-              <div style="font-size: 24px; font-weight: bold; color: #d32f2f;">$${Number(order.total || 0).toFixed(2)}</div>
+          <!-- Customer Delivery Info with Date on Right -->
+          <div style="background: #f8f8f8; padding: 15px; margin-bottom: 15px; border: 2px solid #000;">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
+              <div style="font-size: 11px; font-weight: bold; text-transform: uppercase; color: #666;">LIVRER A:</div>
+              <div style="font-size: 12px; color: #000; font-weight: bold; text-align: right;">${new Date(order.created_at).toLocaleDateString('fr-FR')}</div>
             </div>
+            <div style="font-size: 18px; font-weight: bold; color: #000; margin-bottom: 8px;">${order.customer_name || 'N/A'}</div>
+            <div style="font-size: 13px; color: #000; line-height: 1.4; margin-bottom: 6px;">${order.delivery_address || 'N/A'}</div>
+            <div style="font-size: 15px; font-weight: bold; color: #000;">Tel: ${order.customer_phone || 'N/A'}</div>
           </div>
 
-          <!-- Barcodes Section -->
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 30px; padding-top: 30px; border-top: 2px solid #000;">
-            <!-- QR Code -->
-            <div style="text-align: center;">
-              <img src="${qrCode}" alt="QR Code" style="width: 180px; height: 180px; border: 2px solid #000;"/>
-              <div style="font-size: 12px; margin-top: 10px; font-weight: bold; color: #000;">SCANNER POUR DÉTAILS</div>
-            </div>
-
-            <!-- Barcode -->
-            <div style="text-align: center; flex: 1; margin-left: 30px;">
-              <div id="barcode-container"></div>
-              <div style="font-size: 16px; margin-top: 10px; font-weight: bold; letter-spacing: 2px; color: #000;">ORDER-${String(order.id).padStart(8, '0')}</div>
-            </div>
+          <!-- QR Code -->
+          <div style="text-align: center; margin-bottom: 15px; flex: 1; display: flex; flex-direction: column; justify-content: center;">
+            <img src="${qrCode}" alt="QR Code" style="width: 200px; height: 200px; border: 3px solid #000; margin: 0 auto; display: block;"/>
+            <div style="font-size: 12px; margin-top: 8px; font-weight: bold; color: #000;">SCANNER POUR DETAILS COMMANDE</div>
           </div>
 
-          <!-- Footer -->
-          <div style="margin-top: 30px; padding-top: 20px; border-top: 2px solid #000; text-align: center; font-size: 12px; color: #666;">
-            <div>Repas marocains authentiques • Préparés avec amour</div>
-            <div style="margin-top: 5px;">www.lamsalna.com • info@lamsalna.com</div>
+          <!-- EAN13 Barcode -->
+          <div style="text-align: center; border-top: 3px solid #000; padding-top: 15px;">
+            <img src="${barcode}" alt="Barcode EAN13" style="width: 100%; max-width: 500px; height: auto; display: block; margin: 0 auto;"/>
           </div>
         </div>
       `;
 
-      // Add barcode using simple SVG
-      const barcodeContainer = tempContainer.querySelector('#barcode-container');
-      if (barcodeContainer) {
-        const barcodeValue = `ORDER${String(order.id).padStart(8, '0')}`;
-        const barcodeSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-        barcodeContainer.appendChild(barcodeSvg);
-        
-        // Simple barcode generation
-        barcodeSvg.setAttribute('width', '400');
-        barcodeSvg.setAttribute('height', '80');
-        barcodeSvg.setAttribute('style', 'background: #ffffff;');
-        barcodeSvg.innerHTML = `
-          <rect width="400" height="80" fill="#ffffff"/>
-          <text x="200" y="40" text-anchor="middle" font-size="32" font-family="monospace" font-weight="bold" fill="#000000">${barcodeValue}</text>
-          <rect x="20" y="50" width="3" height="25" fill="#000000"/>
-          <rect x="26" y="50" width="1" height="25" fill="#000000"/>
-          <rect x="30" y="50" width="3" height="25" fill="#000000"/>
-          <rect x="36" y="50" width="1" height="25" fill="#000000"/>
-          <rect x="40" y="50" width="2" height="25" fill="#000000"/>
-          <rect x="45" y="50" width="3" height="25" fill="#000000"/>
-          <rect x="51" y="50" width="1" height="25" fill="#000000"/>
-          <rect x="55" y="50" width="2" height="25" fill="#000000"/>
-          <rect x="60" y="50" width="3" height="25" fill="#000000"/>
-          <rect x="66" y="50" width="1" height="25" fill="#000000"/>
-          <rect x="70" y="50" width="3" height="25" fill="#000000"/>
-          <rect x="76" y="50" width="2" height="25" fill="#000000"/>
-          <rect x="81" y="50" width="1" height="25" fill="#000000"/>
-          <rect x="85" y="50" width="3" height="25" fill="#000000"/>
-        `;
-      }
-
       // Wait for images to load
-      await new Promise(resolve => setTimeout(resolve, 500));
+      await new Promise((resolve) => setTimeout(resolve, 1000));
 
       // Convert to canvas
       const canvas = await html2canvas(tempContainer, {
         scale: 2,
         backgroundColor: '#ffffff',
         logging: false,
-        ignoreElements: (element) => {
-          // Ignore elements with oklch colors
-          const computedStyle = window.getComputedStyle(element);
-          return computedStyle.color?.includes('oklch') || 
-                 computedStyle.backgroundColor?.includes('oklch') ||
-                 computedStyle.borderColor?.includes('oklch');
-        },
-        onclone: (clonedDoc) => {
-          // Force all colors to be standard hex
-          const allElements = clonedDoc.querySelectorAll('*');
-          allElements.forEach((el: any) => {
-            if (el.style) {
-              // Remove any oklch colors
-              if (el.style.color?.includes('oklch')) el.style.color = '#000000';
-              if (el.style.backgroundColor?.includes('oklch')) el.style.backgroundColor = '#ffffff';
-              if (el.style.borderColor?.includes('oklch')) el.style.borderColor = '#000000';
-            }
-          });
-        },
+        width: 600,
+        height: 900,
+        useCORS: true,
+        allowTaint: true,
       });
 
-      // Create PDF
+      // Create PDF in 4x6 inch format (sticker)
       const pdf = new jsPDF({
         orientation: 'portrait',
-        unit: 'mm',
-        format: 'a4',
+        unit: 'in',
+        format: [4, 6],
       });
 
       const imgData = canvas.toDataURL('image/png');
-      const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
-
-      pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
-      pdf.save(`Etiquette-Commande-${order.id}.pdf`);
+      pdf.addImage(imgData, 'PNG', 0, 0, 4, 6);
+      pdf.save(`Etiquette-${order.id}.pdf`);
 
       // Cleanup
       document.body.removeChild(iframe);
-      console.log('Label downloaded successfully');
+      console.log('Sticker label downloaded successfully');
     } catch (error: any) {
       console.error('Error generating label:', error);
-      alert(`Erreur: ${error.message || 'Impossible de générer l\'étiquette'}`);
+      alert(
+        `Erreur: ${error.message || "Impossible de generer l'etiquette"}`
+      );
     }
   };
 

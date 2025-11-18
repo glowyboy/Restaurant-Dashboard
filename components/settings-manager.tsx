@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import { supabase } from '@/lib/supabase';
 import { Plus, Trash2, Save, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
+import { PlansManager } from './plans-manager';
 
 interface DeliveryZone {
   id: number;
@@ -136,6 +137,9 @@ export function SettingsManager() {
 
   return (
     <div className="space-y-6">
+      {/* Plans Management */}
+      <PlansManager />
+
       {/* General Settings */}
       <Card>
         <CardHeader>
