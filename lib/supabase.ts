@@ -42,6 +42,9 @@ export interface Order {
   plan_name?: string;
   number_of_people?: number;
   meals_per_day?: number;
+  customer_name?: string;
+  customer_phone?: string;
+  delivery_address?: string;
   items: OrderItem[];
   total: number;
   status: string;

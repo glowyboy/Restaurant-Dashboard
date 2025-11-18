@@ -14,6 +14,7 @@ import { supabase, type Order } from '@/lib/supabase';
 import { format } from 'date-fns';
 import { Eye, RefreshCw, CheckCircle, Clock, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { ShippingLabel } from './shipping-label';
 
 interface OrdersTableProps {
   orders: Order[];
@@ -64,10 +65,12 @@ export function OrdersTable({ orders, onRefresh }: OrdersTableProps) {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>Toutes les Commandes</CardTitle>
-          <Button onClick={onRefresh} variant="outline" size="sm">
-            <RefreshCw className="h-4 w-4 mr-2" />
-            Actualiser
-          </Button>
+          <div className="flex gap-2">
+            <Button onClick={onRefresh} variant="outline" size="sm">
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Actualiser
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
@@ -119,7 +122,8 @@ export function OrdersTable({ orders, onRefresh }: OrdersTableProps) {
                       {format(new Date(order.created_at), 'dd/MM/yyyy HH:mm')}
                     </td>
                     <td className="p-4">
-                      <div className="flex gap-2">
+                      <div className="flex gap-2 flex-wrap">
+                        <ShippingLabel order={order} />
                         <Button
                           onClick={() => setSelectedOrder(order)}
                           variant="outline"
