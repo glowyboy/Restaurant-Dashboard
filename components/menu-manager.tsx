@@ -36,8 +36,10 @@ export function MenuManager({ dishes, onRefresh }: MenuManagerProps) {
     setFormData({
       name: dish.name,
       price: dish.price.toString(),
-      image: dish.image,
+      image: dish.image || '',
     });
+    setImageFile(null);
+    setUseUrl(true);
   };
 
   const handleAdd = () => {
@@ -92,19 +94,26 @@ export function MenuManager({ dishes, onRefresh }: MenuManagerProps) {
 
       if (editingDish) {
         // Update existing dish
+        const updateData: any = {
+          name: formData.name,
+          price: parseFloat(formData.price),
+        };
+        
+        // Only update image if it changed
+        if (imageUrl && imageUrl !== editingDish.image) {
+          updateData.image = imageUrl;
+        }
+
         const { error } = await supabase
           .from('dishes')
-          .update({
-            name: formData.name,
-            price: parseFloat(formData.price),
-            image: imageUrl,
-          })
+          .update(updateData)
           .eq('id', editingDish.id);
 
         if (error) throw error;
         
-        toast.success('Plat mis à jour');
+        toast.success('Plat mis à jour avec succès');
         setEditingDish(null);
+        setImageFile(null);
         onRefresh();
       } else {
         // Add new dish
@@ -182,14 +191,14 @@ export function MenuManager({ dishes, onRefresh }: MenuManagerProps) {
               <Card key={dish.id} className="overflow-hidden relative">
                 <button
                   onClick={() => toggleFeatured(dish)}
-                  className={`absolute top-2 right-2 z-10 p-2 rounded-full ${
+                  className={`absolute top-2 right-2 z-10 p-2 rounded-full transition-all hover:scale-110 ${
                     dish.is_featured 
-                      ? 'bg-yellow-400 text-white' 
-                      : 'bg-white/80 text-gray-400'
-                  } hover:scale-110 transition-transform`}
+                      ? 'bg-yellow-400 text-yellow-900 shadow-lg' 
+                      : 'bg-white/90 text-gray-400 hover:bg-yellow-100'
+                  }`}
                   title={dish.is_featured ? 'Retirer des favoris' : 'Ajouter aux favoris'}
                 >
-                  <Star className={`h-5 w-5 ${dish.is_featured ? 'fill-current' : ''}`} />
+                  <Star className={`h-5 w-5 ${dish.is_featured ? 'fill-yellow-900' : ''}`} />
                 </button>
                 <div className="relative h-48 w-full">
                   <Image
@@ -197,6 +206,8 @@ export function MenuManager({ dishes, onRefresh }: MenuManagerProps) {
                     alt={dish.name}
                     fill
                     className="object-cover"
+                    priority={false}
+                    sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                   />
                 </div>
                 <CardContent className="p-4">
@@ -243,7 +254,7 @@ export function MenuManager({ dishes, onRefresh }: MenuManagerProps) {
               <Label htmlFor="name">Nom du plat</Label>
               <Input
                 id="name"
-                value={formData.name}
+                value={formData.name || ''}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 placeholder="Ex: Couscous Royal"
               />
@@ -254,7 +265,7 @@ export function MenuManager({ dishes, onRefresh }: MenuManagerProps) {
                 id="price"
                 type="number"
                 step="0.01"
-                value={formData.price}
+                value={formData.price || ''}
                 onChange={(e) => setFormData({ ...formData, price: e.target.value })}
                 placeholder="Ex: 18.00"
               />
@@ -286,7 +297,7 @@ export function MenuManager({ dishes, onRefresh }: MenuManagerProps) {
                 <>
                   <Input
                     id="image"
-                    value={formData.image}
+                    value={formData.image || ''}
                     onChange={(e) => setFormData({ ...formData, image: e.target.value })}
                     placeholder="https://images.unsplash.com/..."
                   />
@@ -307,7 +318,9 @@ export function MenuManager({ dishes, onRefresh }: MenuManagerProps) {
                   </p>
                   {imageFile && (
                     <p className="text-xs text-primary mt-1">
-                      ✓ {imageFile.name} ({(imageFile.size / 1024 / 1024).toFixed(2)} MB)
+                      ✓ {imageFile.name} ({imageFile.size > 1024 * 1024 
+                        ? `${(imageFile.size / 1024 / 1024).toFixed(2)} MB`
+                        : `${(imageFile.size / 1024).toFixed(2)} KB`})
                     </p>
                   )}
                 </>
