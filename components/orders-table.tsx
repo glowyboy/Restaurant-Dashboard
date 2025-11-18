@@ -122,8 +122,7 @@ export function OrdersTable({ orders, onRefresh }: OrdersTableProps) {
                       {format(new Date(order.created_at), 'dd/MM/yyyy HH:mm')}
                     </td>
                     <td className="p-4">
-                      <div className="flex gap-2 flex-wrap">
-                        <ShippingLabel order={order} />
+                      <div className="flex gap-2">
                         <Button
                           onClick={() => setSelectedOrder(order)}
                           variant="outline"
@@ -163,7 +162,10 @@ export function OrdersTable({ orders, onRefresh }: OrdersTableProps) {
       <Dialog open={!!selectedOrder} onOpenChange={() => setSelectedOrder(null)}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Commande #{selectedOrder?.id}</DialogTitle>
+            <div className="flex items-center justify-between">
+              <DialogTitle>Commande #{selectedOrder?.id}</DialogTitle>
+              {selectedOrder && <ShippingLabel order={selectedOrder} />}
+            </div>
           </DialogHeader>
           {selectedOrder && (
             <div className="space-y-6">
