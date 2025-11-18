@@ -97,20 +97,23 @@ export function MenuManager({ dishes, onRefresh }: MenuManagerProps) {
         const updateData: any = {
           name: formData.name,
           price: parseFloat(formData.price),
+          image: imageUrl || editingDish.image, // Always include image
         };
-        
-        // Only update image if it changed
-        if (imageUrl && imageUrl !== editingDish.image) {
-          updateData.image = imageUrl;
-        }
 
-        const { error } = await supabase
+        console.log('Updating dish:', editingDish.id, updateData);
+
+        const { data, error } = await supabase
           .from('dishes')
           .update(updateData)
-          .eq('id', editingDish.id);
+          .eq('id', editingDish.id)
+          .select();
 
-        if (error) throw error;
+        if (error) {
+          console.error('Update error:', error);
+          throw error;
+        }
         
+        console.log('Update successful:', data);
         toast.success('Plat mis à jour avec succès');
         setEditingDish(null);
         setImageFile(null);
@@ -131,9 +134,9 @@ export function MenuManager({ dishes, onRefresh }: MenuManagerProps) {
         setIsAdding(false);
         onRefresh();
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error saving dish:', error);
-      toast.error('Erreur lors de l\'enregistrement');
+      toast.error(`Erreur: ${error.message || 'Impossible de sauvegarder'}`);
     } finally {
       setSaving(false);
     }
