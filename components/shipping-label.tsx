@@ -59,25 +59,25 @@ export function ShippingLabel({ order }: ShippingLabelProps) {
 
       // Build the label HTML
       tempContainer.innerHTML = `
-        <div style="font-family: Arial, sans-serif; border: 3px solid #000; padding: 30px;">
+        <div style="font-family: Arial, sans-serif; border: 3px solid #000; padding: 30px; background: #ffffff; color: #000000;">
           <!-- Header with Logo -->
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; border-bottom: 2px solid #000; padding-bottom: 20px;">
             <div>
-              <img src="/logo.png" alt="Logo" style="height: 80px;" onerror="this.style.display='none'"/>
-              <h1 style="margin: 10px 0 0 0; font-size: 32px; font-weight: bold;">LAMSALNA</h1>
+              <h1 style="margin: 0; font-size: 32px; font-weight: bold; color: #d32f2f;">LAMSALNA</h1>
+              <p style="margin: 5px 0 0 0; font-size: 14px; color: #666;">Repas Marocains Authentiques</p>
             </div>
             <div style="text-align: right;">
-              <div style="font-size: 18px; font-weight: bold;">COMMANDE #${order.id}</div>
-              <div style="font-size: 14px; margin-top: 5px;">${new Date(order.created_at).toLocaleDateString('fr-FR')}</div>
+              <div style="font-size: 18px; font-weight: bold; color: #000;">COMMANDE #${order.id}</div>
+              <div style="font-size: 14px; margin-top: 5px; color: #666;">${new Date(order.created_at).toLocaleDateString('fr-FR')}</div>
             </div>
           </div>
 
           <!-- Customer Info -->
-          <div style="margin-bottom: 30px; background: #f5f5f5; padding: 20px; border-radius: 8px;">
+          <div style="margin-bottom: 30px; background: #f5f5f5; padding: 20px; border-radius: 8px; border: 1px solid #ddd;">
             <div style="font-size: 14px; font-weight: bold; margin-bottom: 15px; text-transform: uppercase; color: #666;">LIVRER À:</div>
-            <div style="font-size: 24px; font-weight: bold; margin-bottom: 10px;">${order.customer_name || 'N/A'}</div>
-            <div style="font-size: 18px; margin-bottom: 8px;">📍 ${order.delivery_address || 'N/A'}</div>
-            <div style="font-size: 18px;">📞 ${order.customer_phone || 'N/A'}</div>
+            <div style="font-size: 24px; font-weight: bold; margin-bottom: 10px; color: #000;">${order.customer_name || 'N/A'}</div>
+            <div style="font-size: 18px; margin-bottom: 8px; color: #000;">📍 ${order.delivery_address || 'N/A'}</div>
+            <div style="font-size: 18px; color: #000;">📞 ${order.customer_phone || 'N/A'}</div>
           </div>
 
           <!-- Order Items -->
@@ -85,12 +85,12 @@ export function ShippingLabel({ order }: ShippingLabelProps) {
             <div style="font-size: 14px; font-weight: bold; margin-bottom: 15px; text-transform: uppercase; color: #666;">CONTENU:</div>
             ${(order.items || []).map(item => `
               <div style="display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #ddd;">
-                <div style="font-size: 16px;">${item.quantity || 1}x ${item.dish_name || 'Plat'}</div>
-                <div style="font-size: 16px; font-weight: bold;">$${((item.price || 0) * (item.quantity || 1)).toFixed(2)}</div>
+                <div style="font-size: 16px; color: #000;">${item.quantity || 1}x ${item.dish_name || 'Plat'}</div>
+                <div style="font-size: 16px; font-weight: bold; color: #000;">$${((item.price || 0) * (item.quantity || 1)).toFixed(2)}</div>
               </div>
             `).join('')}
             <div style="display: flex; justify-content: space-between; padding: 15px 0; margin-top: 10px; border-top: 2px solid #000;">
-              <div style="font-size: 20px; font-weight: bold;">TOTAL:</div>
+              <div style="font-size: 20px; font-weight: bold; color: #000;">TOTAL:</div>
               <div style="font-size: 24px; font-weight: bold; color: #d32f2f;">$${Number(order.total || 0).toFixed(2)}</div>
             </div>
           </div>
@@ -100,13 +100,13 @@ export function ShippingLabel({ order }: ShippingLabelProps) {
             <!-- QR Code -->
             <div style="text-align: center;">
               <img src="${qrCode}" alt="QR Code" style="width: 180px; height: 180px; border: 2px solid #000;"/>
-              <div style="font-size: 12px; margin-top: 10px; font-weight: bold;">SCANNER POUR DÉTAILS</div>
+              <div style="font-size: 12px; margin-top: 10px; font-weight: bold; color: #000;">SCANNER POUR DÉTAILS</div>
             </div>
 
             <!-- Barcode -->
             <div style="text-align: center; flex: 1; margin-left: 30px;">
               <div id="barcode-container"></div>
-              <div style="font-size: 16px; margin-top: 10px; font-weight: bold; letter-spacing: 2px;">ORDER-${String(order.id).padStart(8, '0')}</div>
+              <div style="font-size: 16px; margin-top: 10px; font-weight: bold; letter-spacing: 2px; color: #000;">ORDER-${String(order.id).padStart(8, '0')}</div>
             </div>
           </div>
 
@@ -118,33 +118,34 @@ export function ShippingLabel({ order }: ShippingLabelProps) {
         </div>
       `;
 
-      // Add barcode using react-barcode
+      // Add barcode using simple SVG
       const barcodeContainer = tempContainer.querySelector('#barcode-container');
       if (barcodeContainer) {
         const barcodeValue = `ORDER${String(order.id).padStart(8, '0')}`;
         const barcodeSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
         barcodeContainer.appendChild(barcodeSvg);
         
-        // Simple barcode generation (you can enhance this)
+        // Simple barcode generation
         barcodeSvg.setAttribute('width', '400');
         barcodeSvg.setAttribute('height', '80');
+        barcodeSvg.setAttribute('style', 'background: #ffffff;');
         barcodeSvg.innerHTML = `
-          <rect width="400" height="80" fill="white"/>
-          <text x="200" y="40" text-anchor="middle" font-size="32" font-family="monospace" font-weight="bold">${barcodeValue}</text>
-          <rect x="20" y="50" width="3" height="25" fill="black"/>
-          <rect x="26" y="50" width="1" height="25" fill="black"/>
-          <rect x="30" y="50" width="3" height="25" fill="black"/>
-          <rect x="36" y="50" width="1" height="25" fill="black"/>
-          <rect x="40" y="50" width="2" height="25" fill="black"/>
-          <rect x="45" y="50" width="3" height="25" fill="black"/>
-          <rect x="51" y="50" width="1" height="25" fill="black"/>
-          <rect x="55" y="50" width="2" height="25" fill="black"/>
-          <rect x="60" y="50" width="3" height="25" fill="black"/>
-          <rect x="66" y="50" width="1" height="25" fill="black"/>
-          <rect x="70" y="50" width="3" height="25" fill="black"/>
-          <rect x="76" y="50" width="2" height="25" fill="black"/>
-          <rect x="81" y="50" width="1" height="25" fill="black"/>
-          <rect x="85" y="50" width="3" height="25" fill="black"/>
+          <rect width="400" height="80" fill="#ffffff"/>
+          <text x="200" y="40" text-anchor="middle" font-size="32" font-family="monospace" font-weight="bold" fill="#000000">${barcodeValue}</text>
+          <rect x="20" y="50" width="3" height="25" fill="#000000"/>
+          <rect x="26" y="50" width="1" height="25" fill="#000000"/>
+          <rect x="30" y="50" width="3" height="25" fill="#000000"/>
+          <rect x="36" y="50" width="1" height="25" fill="#000000"/>
+          <rect x="40" y="50" width="2" height="25" fill="#000000"/>
+          <rect x="45" y="50" width="3" height="25" fill="#000000"/>
+          <rect x="51" y="50" width="1" height="25" fill="#000000"/>
+          <rect x="55" y="50" width="2" height="25" fill="#000000"/>
+          <rect x="60" y="50" width="3" height="25" fill="#000000"/>
+          <rect x="66" y="50" width="1" height="25" fill="#000000"/>
+          <rect x="70" y="50" width="3" height="25" fill="#000000"/>
+          <rect x="76" y="50" width="2" height="25" fill="#000000"/>
+          <rect x="81" y="50" width="1" height="25" fill="#000000"/>
+          <rect x="85" y="50" width="3" height="25" fill="#000000"/>
         `;
       }
 
