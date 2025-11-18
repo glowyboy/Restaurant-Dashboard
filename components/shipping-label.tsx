@@ -48,14 +48,33 @@ export function ShippingLabel({ order }: ShippingLabelProps) {
       const qrCode = await generateQRCode();
       console.log('QR code generated');
       
-      // Create a temporary container for the label
-      const tempContainer = document.createElement('div');
-      tempContainer.style.position = 'absolute';
-      tempContainer.style.left = '-9999px';
-      tempContainer.style.width = '800px';
-      tempContainer.style.background = 'white';
-      tempContainer.style.padding = '40px';
-      document.body.appendChild(tempContainer);
+      // Create an iframe to isolate styles
+      const iframe = document.createElement('iframe');
+      iframe.style.position = 'absolute';
+      iframe.style.left = '-9999px';
+      iframe.style.width = '800px';
+      iframe.style.height = '1200px';
+      document.body.appendChild(iframe);
+      
+      const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
+      if (!iframeDoc) throw new Error('Cannot access iframe document');
+      
+      // Add basic styles to iframe
+      iframeDoc.write(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <style>
+            * { margin: 0; padding: 0; box-sizing: border-box; }
+            body { background: white; padding: 40px; font-family: Arial, sans-serif; }
+          </style>
+        </head>
+        <body></body>
+        </html>
+      `);
+      iframeDoc.close();
+      
+      const tempContainer = iframeDoc.body;
 
       // Build the label HTML
       tempContainer.innerHTML = `
@@ -157,6 +176,25 @@ export function ShippingLabel({ order }: ShippingLabelProps) {
         scale: 2,
         backgroundColor: '#ffffff',
         logging: false,
+        ignoreElements: (element) => {
+          // Ignore elements with oklch colors
+          const computedStyle = window.getComputedStyle(element);
+          return computedStyle.color?.includes('oklch') || 
+                 computedStyle.backgroundColor?.includes('oklch') ||
+                 computedStyle.borderColor?.includes('oklch');
+        },
+        onclone: (clonedDoc) => {
+          // Force all colors to be standard hex
+          const allElements = clonedDoc.querySelectorAll('*');
+          allElements.forEach((el: any) => {
+            if (el.style) {
+              // Remove any oklch colors
+              if (el.style.color?.includes('oklch')) el.style.color = '#000000';
+              if (el.style.backgroundColor?.includes('oklch')) el.style.backgroundColor = '#ffffff';
+              if (el.style.borderColor?.includes('oklch')) el.style.borderColor = '#000000';
+            }
+          });
+        },
       });
 
       // Create PDF
@@ -174,7 +212,7 @@ export function ShippingLabel({ order }: ShippingLabelProps) {
       pdf.save(`Etiquette-Commande-${order.id}.pdf`);
 
       // Cleanup
-      document.body.removeChild(tempContainer);
+      document.body.removeChild(iframe);
       console.log('Label downloaded successfully');
     } catch (error: any) {
       console.error('Error generating label:', error);
