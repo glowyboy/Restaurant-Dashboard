@@ -162,9 +162,13 @@ export function OrdersTable({ orders, onRefresh }: OrdersTableProps) {
       <Dialog open={!!selectedOrder} onOpenChange={() => setSelectedOrder(null)}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between pr-8">
               <DialogTitle>Commande #{selectedOrder?.id}</DialogTitle>
-              {selectedOrder && <ShippingLabel order={selectedOrder} />}
+              {selectedOrder && (
+                <div className="ml-4">
+                  <ShippingLabel order={selectedOrder} />
+                </div>
+              )}
             </div>
           </DialogHeader>
           {selectedOrder && (
